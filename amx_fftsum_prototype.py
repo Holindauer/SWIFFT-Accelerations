@@ -18,7 +18,31 @@ def extract_matrix_from_text(input_text: str, num_rows: int, num_columns: int) -
 def generate_dummy_fftout():
     return np.random.randint(0, 100, (32, 64))
 
+def amx_hadamard_with_collapsing_sum_prototype(dummy_fftout: np.ndarray, key: np.ndarray) -> np.ndarray:
 
+    # transpose dummy fftout
+    dummy_fftout_transpose = dummy_fftout.T
+
+    # partition dummy_fftout_T into 4 16x32 matrices
+    dummy_fftout_partitions = np.split(dummy_fftout_transpose, 4, axis=0)
+    # split key int0 4 32x16 partitions
+    key_partitions = np.split(key, 4, axis=1)
+
+
+    # concatenate each dummy fftout partition with a 16x32 zero matrix to get 16x64
+    # this is to fit the 16x64 size of the amx tile A 
+    dummy_fftout_partitions_padded = [np.concatenate([partition, np.zeros((16, 32))], axis=1) for partition in dummy_fftout_partitions]
+    assert(dummy_fftout_partitions_padded[0].shape == (16, 64))
+    # concatenate each key partition with a 32x16 zero matrix to get 64x16
+    # this is to fit the 64x16 size of the amx tile A 
+    key_partitions_padded = [np.concatenate([partition, np.zeros((32, 16))], axis=0) for partition in key_partitions]
+    assert(key_partitions_padded[0].shape == (64, 16))
+
+    # compute matmul of likewise padded partions of A and B (using amx tiles in full implementation)
+    likewise_AB_partitions_products = [np.matmul(dummy_fftout_partitions[i], key_partitions[i]) for i in range(4)]
+
+    # concatenate diagonals
+    return np.concatenate([np.diagonal(p) for p in likewise_AB_partitions_products])
 
 def test_algorithm_property_holds():
     """ 
@@ -82,31 +106,11 @@ def test_partitioning_into_4_16x32_and_4_32x16_with_padding_works_also():
     # get dummy fftout (32x64)
     dummy_fftout = generate_dummy_fftout()
 
-    # transpose dummy fftout
-    dummy_fftout_transpose = dummy_fftout.T
+    # perform full algoritm (which includes padding to amx tile size)
+    concatenated_diagonals = amx_hadamard_with_collapsing_sum_prototype(dummy_fftout, key)
 
-    # partition dummy_fftout_T into 4 16x32 matrices
-    dummy_fftout_partitions = np.split(dummy_fftout_transpose, 4, axis=0)
-
-    # concatenate each dummy fftout partition with a 16x32 zero matrix to get 16x64
-    dummy_fftout_partitions_padded = [np.concatenate([partition, np.zeros((16, 32))], axis=1) for partition in dummy_fftout_partitions]
-    assert(dummy_fftout_partitions_padded[0].shape == (16, 64))
-
-    # split key int0 4 32x16 partitions
-    key_partitions = np.split(key, 4, axis=1)
-
-    # concatenate each key partition with a 32x16 zero matrix to get 64x16
-    key_partitions_padded = [np.concatenate([partition, np.zeros((32, 16))], axis=0) for partition in key_partitions]
-    assert(key_partitions_padded[0].shape == (64, 16))
-
-    # compute matmul of likewise partions of A and B
-    hadamard_products = [np.matmul(dummy_fftout_partitions[i], key_partitions[i]) for i in range(4)]
-
-    # concatenate diagonals
-    concatenated_diagonals = np.concatenate([np.diagonal(hadamard_product) for hadamard_product in hadamard_products])
-    
     # ensure concatenated diagonals same
-    expected = np.diag(np.matmul(dummy_fftout_transpose, key))  
+    expected = np.diag(np.matmul(dummy_fftout.T, key))  
     # assert that the concatenated diagonals are equal to the diagonal of the result
     assert np.array_equal(concatenated_diagonals, expected)
 
