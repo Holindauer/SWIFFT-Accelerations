@@ -62,7 +62,7 @@ static void init_buffer (int8_t *buf, int8_t value)
   for (i = 0; i < rows; i++)
     for (j = 0; j < colsb; j++)
     {
-        buf[i * colsb + j] = value;
+        buf[i * colsb + j] = i;
     }
 }
 
