@@ -3,7 +3,7 @@ CC = gcc
 BIN1 = test-amxtile
 BIN2 = test-amxtiles-lookup-key
 CFILES1 = test-amxtile.c
-CFILES2 = test-amxtiles-lookup-key.c
+CFILES2 = test-amxtile-lookup-key.c
 
 all: $(BIN1) $(BIN2)
 
