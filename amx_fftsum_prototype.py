@@ -19,9 +19,10 @@ Given input fftout and PI_key (both 32x64):
 
 3.) Evenly partition PI_key into 4 32x16 matrices
 
-4.) Optionally, zero pad the partitions from 16x32 to 16x64 and 32x16 to 64x16 for the
-    fftout and PI_key respectively. Sparse documentation on size reconfiguration of 
-    amx tiles make this attractive.
+4.) Zero pad the partitions from 16x32 to 16x64 and 32x16 to 64x16 for the
+    fftout and PI_key respectively. The AMX tiles work on tiles that are 
+    statically size at 16x64, however, this is different than the matrix 
+    stored within them.
 
 5.) Compute the matmul of each likewise partitions (F.T_1 * P_1, F.T_2 * P_2, ... )
 
