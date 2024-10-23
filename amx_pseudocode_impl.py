@@ -73,9 +73,9 @@ def __tile_dpbssd(dst, src0, src1):
     return dst
 
 
+# ones * pi key partition
+def test_1():
 
-if __name__ == "__main__":
-        
     # ones matrix of shape (16, 64)
     src1 = np.ones((16, 64), dtype=np.int8)
 
@@ -89,3 +89,22 @@ if __name__ == "__main__":
     __tile_dpbssd(dst, src1, src2)
 
     print(dst)
+
+# same mem layout, but different shapes
+def test_2():
+
+    # create (16,64) matrix where each row contains only 0's for row 0, 1's for row 1, etc.
+    src1 = np.tile(np.arange(16)[:, np.newaxis], (1, 64))
+
+    # src2 has same contiguous memory, but treated as (64, 16) matrix
+    src2 = src1.copy().reshape(64, 16)
+
+    dst = np.zeros((16, 16), dtype=np.int32)
+
+    __tile_dpbssd(dst, src1, src2)
+
+    print(dst)
+
+if __name__ == "__main__":
+    test_1()
+    test_2()
