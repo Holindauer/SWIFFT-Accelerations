@@ -1,5 +1,6 @@
 import numpy as np
 import re # regular expressions
+from typing import List
 
 """
 This script creates 4 partitions of size (32, 16) of the SWIFFT_PI_key (originally a 32x64 matrix).
@@ -40,19 +41,23 @@ def print_matrix(array: np.ndarray, name="Matrix: "):
 def ones_mat_64_32():
     return np.ones((64, 32), dtype=int)
 
-if __name__ == "__main__" :
-    
+def create_padded_partitions():
+
     SWIFFT_PI_key = extract_matrix_from_text(ORIGINAL_C_PI_KEY, 32, 64)
 
     # Create 4 partitions of size (32, 16)
     partitions = np.split(SWIFFT_PI_key, 4, axis=1) 
 
-    print_matrix(partitions[0] , "Partition 32x16: ")
-
     # zero pad by adding 32 rows of 16 0's to get 64x16 matrix
     padded_partitions = [np.pad(partition, ((0, 32), (0, 0)), 'constant') for partition in partitions]
-    print_matrix(padded_partitions[0] , "Padded Partition 64x16: ")
     assert(padded_partitions[0].shape == (64, 16))
+
+    return padded_partitions, SWIFFT_PI_key
+
+if __name__ == "__main__" :
+    
+
+    padded_partitions, SWIFFT_PI_key = create_padded_partitions()
 
     # ensure algorithm property holds with these properties
     ones_mat = ones_mat_64_32()
@@ -65,9 +70,9 @@ if __name__ == "__main__" :
 
     # Convert 64x16 Pi_key into formated row-major order C arrays
     flattened_partitions = [p.flatten() for p in padded_partitions]
-    formated_c_arrays = [ format_array_as_c(p, f"PI_key_padded_partition_{i}", 32) for (i, p) in enumerate(flattened_partitions)]
+    formated_c_arrays = [ format_array_as_c(p, f"PI_key_padded_partition_{i}", 16) for (i, p) in enumerate(flattened_partitions)]
 
-    # save to amx_test_inputs dir as c files
-    for (i, c_array) in enumerate(formated_c_arrays):
-        with open(f"amx_test_inputs_c/PI_key_padded_partition{i}.c", "w") as f:
-            f.write(c_array)
+    # # save to amx_test_inputs dir as c 
+    # for (i, c_array) in enumerate(formated_c_arrays):
+    #     with open(f"PI_key_padded_partitions/PI_key_padded_partition{i}.c", "w") as f:
+    #         f.write(c_array)

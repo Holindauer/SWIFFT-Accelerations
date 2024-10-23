@@ -1,4 +1,5 @@
 import numpy as np  
+from create_PI_key_partition_lookups import create_padded_partitions
 
 """
 This script implements the pseudocode for how the TMUL unit performs matrix multiplication
@@ -72,14 +73,19 @@ def __tile_dpbssd(dst, src0, src1):
     return dst
 
 
+
 if __name__ == "__main__":
-    
-    # Create matrices
-    src0 = np.ones((16, 64), dtype=np.int8)
-    src1 = np.ones((64, 16), dtype=np.int8)
+        
+    # ones matrix of shape (16, 64)
+    src1 = np.ones((16, 64), dtype=np.int8)
+
+    # set src2 to first (64, 16) padded partition of SWIFFT_PI_key
+    padded_partitions, _ = create_padded_partitions()
+    src2 = padded_partitions[0]
+    assert(src2.shape == (64, 16))
 
     dst = np.zeros((16, 16), dtype=np.int32)
 
-    __tile_dpbssd(dst, src0, src1)
+    __tile_dpbssd(dst, src1, src2)
 
     print(dst)
