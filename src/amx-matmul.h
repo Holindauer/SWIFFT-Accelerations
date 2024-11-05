@@ -5,44 +5,26 @@
 #include <string.h>
 #include <sys/syscall.h>
 #include <stdbool.h>
-#include <time.h>   
-#include <stdlib.h>
 
 #define ARCH_GET_XCOMP_PERM     0x1022
 #define ARCH_REQ_XCOMP_PERM     0x1023
 #define XFEATURE_XTILECFG       17
 #define XFEATURE_XTILEDATA      18
 
+// max buffer size for ANX tile in bytes
 #define MAX 1024 
 
 /* Set_tiledata_use() - Invoke syscall to set ARCH_SET_STATE_USE */
-static bool set_tiledata_use()
-{
-   if (syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA)) 
-   {
+inline bool set_tiledata_use(){
+   if (syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_PERM, XFEATURE_XTILEDATA)) {
       printf("\n Fail to do XFEATURE_XTILEDATA \n\n");
       return false;
    }
-   else
-   {
+   else{
       printf("\n TILE DATA USE SET - OK \n\n");
       return true;
    }
-
-   return true;
 }
-
-/* Naive matmul uint16_t matmul w/ zero extension to uint32_t */
-static void naive_matmul_uint16_t(const uint16_t *A, const uint16_t *B, uint32_t *c, int A_rows, int A_cols, int B_cols){
-  for (int i = 0; i < A_rows; i++) {
-    for (int j = 0; j < B_cols; j++) {
-      for (int k = 0; k < A_cols; k++){
-        // zero extend mul args from 16->32
-        c[i * B_cols + j] += (uint32_t)A[i * A_cols + k] * (uint32_t)B[k * B_cols + j];
-      }
-    }
-  }
-} 
 
 /*
   AMX's implementation of dpbuud.
@@ -158,9 +140,7 @@ inline void bit_recombine(const uint32_t *low_bits, const uint32_t *high_bits, u
 
 /* left shift uint32_t buffer using naive method */
 inline void naive_left_shift_buffer32(uint32_t *buf, size_t length, int shift) {
-    for (size_t i = 0; i < length; ++i) {
-        buf[i] <<= shift;
-    }
+    for (size_t i = 0; i < length; ++i) buf[i] <<= shift;
 }
 
 /* left shift uint32_t buffer using AVX-512 */
@@ -184,9 +164,7 @@ inline void left_shift_buffer32_avx512(uint32_t *buf, size_t length, int shift) 
 
 /* add two uint32_t buffers */
 inline void naive_add_buffer32(uint32_t *buf1, uint32_t *buf2, uint32_t *res, size_t length) {
-    for (size_t i = 0; i < length; ++i) {
-        res[i] = buf1[i] + buf2[i];
-    }
+    for (size_t i = 0; i < length; ++i) res[i] = buf1[i] + buf2[i];
 } 
 
 /* Add two uint32_t buffers using AVX-512 */
@@ -203,13 +181,11 @@ inline void add_buffer32_avx512(uint32_t *buf1, uint32_t *buf2, uint32_t *res, s
     }
 
     // Handle any remaining elements that don't fit into a full SIMD vector
-    for (; i < length; ++i) {
-        res[i] = buf1[i] + buf2[i];
-    }
+    for (; i < length; ++i) res[i] = buf1[i] + buf2[i];   
 }
 
 /* uint16_t matmul w/ bit splitting to uint8_t */
-static inline void bit_split_amx_matmul(const uint16_t* src1, const uint16_t* src2, uint32_t* res){
+inline void bit_split_amx_matmul(const uint16_t* src1, const uint16_t* src2, uint32_t* res){
 
     // mem for split buffers
     uint8_t src1_hi[MAX]; // A
@@ -246,117 +222,4 @@ static inline void bit_split_amx_matmul(const uint16_t* src1, const uint16_t* sr
     add_buffer32_avx512(AC, BD, res, MAX/4);
     add_buffer32_avx512(res, BC, res, MAX/4);
     add_buffer32_avx512(res, AD, res, MAX/4);
-}
-
-/* ensures values are within 0-256 inclusive */
-inline uint16_t ensure_correct_range(uint16_t* buf, size_t length) {
-    for (size_t i = 0; i < length; ++i) {
-        if (buf[i] > 256) {
-            return 0; // or some error code
-        }
-    }
-    return 1; // success
-}
-
-/* Print uint32_t buffer */
-inline void print_buffer32(uint32_t* buf, uint32_t rows, uint32_t colsb)
-{
-   for (int i = 0; i < rows; i++) {
-     for (int j = 0; j < (colsb); j++)
-     {
-         printf("%u ", buf[i * colsb + j]);
-     }
-     printf("\n");
-   }
-   printf("\n");
-}
-
-/* Initialize random uint16_t buffer within Z_257 range */
-inline void init_random_buffer16(uint16_t *buf, uint32_t size) {
-  for (uint32_t i = 0; i < size; i++){
-    buf[i] = rand() % 257; 
-  }
-}
-
-
-/* Test amx accuracy on fuzz input */
-void test_amx_accuracy_fuzz (int rounds, bool verbose) {
-    for (int i=0; i<rounds; i++){
-
-        // init random input
-        uint16_t fuzz_lhs[MAX], fuzz_rhs[MAX];
-        init_random_buffer16(fuzz_lhs, MAX);
-        init_random_buffer16(fuzz_rhs, MAX);
-
-        // result buffers
-        uint32_t naive_res[256], bit_split_result[256];
-        memset(naive_res, 0, sizeof(naive_res));
-        memset(bit_split_result, 0, sizeof(bit_split_result));
-
-        // perform both matmuls
-        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
-        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
-
-        // print result 
-        if (verbose) {
-            printf("\nNaive Result:\n");
-            print_buffer32(naive_res, 16, 16);   
-            printf("\nBit Split Result:\n");
-            print_buffer32(bit_split_result, 16, 16);
-        }
-        // ensure naive and naive w/ bit split are equal
-        for (size_t i = 0; i < 256; ++i)
-            assert(naive_res[i] == bit_split_result[i]);
-    
-    }
-    puts("\test_amx_accuracy_fuzz... PASS!!\n");
-}
-
-/* time trial for AMX mamtul against naive */
-void test_amx_time_fuzz(int rounds) {
-    clock_t start, end;
-    double amx_cpu_time, naive_cpu_time;
-
-    // init random input
-    uint16_t fuzz_lhs[MAX], fuzz_rhs[MAX];
-    init_random_buffer16(fuzz_lhs, MAX);
-    init_random_buffer16(fuzz_rhs, MAX);
-
-    // result buffers
-    uint32_t naive_res[256], bit_split_result[256];
-    memset(naive_res, 0, sizeof(naive_res));
-    memset(bit_split_result, 0, sizeof(bit_split_result));
-
-    // perform rounds number of matmuls and time them
-    start = clock();
-    for (int i = 0; i < rounds; i++) {
-        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
-    }
-    end = clock();
-    naive_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    // perform rounds number of matmuls and time them
-    start = clock();
-    for (int i = 0; i < rounds; i++) {
-        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
-    }
-    end = clock();
-    amx_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;
-
-    // print results
-    printf("\nNaive CPU Time: %f\n", naive_cpu_time);
-    printf("AMX CPU Time: %f\n", amx_cpu_time);
-    printf("AMX is %f times faster than naive\n", naive_cpu_time / amx_cpu_time);
-}   
-
-int main(void){
-
-    // ask permission to use tile data
-    set_tiledata_use();
-
-    test_amx_accuracy_fuzz(10000, false);
-    test_amx_time_fuzz(10000);
-
-    puts("");
-    return 0;   
 }

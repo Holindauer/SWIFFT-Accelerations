@@ -1,7 +1,7 @@
 CFLAG = -O3 -march=native -fno-strict-aliasing -mamx-tile -mamx-int8 -mavx512f -mavx512dq # -O2 default for amx
 CC = gcc
-BIN1 = test-amxtile 
-CFILES1 =test-amxtile.c 
+BIN1 = test-amx-matmul 
+CFILES1 =test-amx-matmul.c 
 
 all: $(BIN1)
 
