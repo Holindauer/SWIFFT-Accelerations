@@ -34,6 +34,10 @@ static void init_random_buffer16(uint16_t *buf, uint32_t size) {
 
 /* Test amx accuracy on fuzz input */
 static void test_amx_accuracy_fuzz (int rounds, bool verbose) {
+
+
+    int M = 16, K = 16, N = 16;
+
     for (int i=0; i<rounds; i++){
 
         // init random input
@@ -47,8 +51,8 @@ static void test_amx_accuracy_fuzz (int rounds, bool verbose) {
         memset(bit_split_result, 0, sizeof(bit_split_result));
 
         // perform both matmuls
-        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
-        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
+        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, M, 4*K, N);
+        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result, M, N, K);
 
         // print result 
         if (verbose) {
@@ -70,6 +74,8 @@ static void test_amx_time_fuzz(int rounds) {
     clock_t start, end;
     double amx_cpu_time, naive_cpu_time;
 
+    int M = 16, K = 16, N = 16;
+
     // init random input
     uint16_t fuzz_lhs[MAX], fuzz_rhs[MAX];
     init_random_buffer16(fuzz_lhs, MAX);
@@ -83,7 +89,7 @@ static void test_amx_time_fuzz(int rounds) {
     // perform rounds number of matmuls and time them
     start = clock();
     for (int i = 0; i < rounds; i++) {
-        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
+        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, M, 4*K, N);
     }
     end = clock();
     naive_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;
@@ -91,7 +97,7 @@ static void test_amx_time_fuzz(int rounds) {
     // perform rounds number of matmuls and time them
     start = clock();
     for (int i = 0; i < rounds; i++) {
-        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
+        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result, M, N, K);
     }
     end = clock();
     amx_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;

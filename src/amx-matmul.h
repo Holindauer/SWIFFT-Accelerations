@@ -184,18 +184,28 @@ inline void add_buffer32_avx512(uint32_t *buf1, uint32_t *buf2, uint32_t *res, s
     for (; i < length; ++i) res[i] = buf1[i] + buf2[i];   
 }
 
-/* uint16_t matmul w/ bit splitting to uint8_t */
-inline void bit_split_amx_matmul(const uint16_t* src1, const uint16_t* src2, uint32_t* res){
+/* 
+  uint16_t matmul w/ bit splitting to uint8_t 
+
+   - src1 = M x 4K
+   - src2 = 4K x N
+   - res = M x N (but is uint32_t)
+*/
+inline void bit_split_amx_matmul( const uint16_t* src1, const uint16_t* src2, uint32_t* res, int M, int K, int N ){
+
+    const int src1_elements = M * 4 * K;
+    const int src2_elements = 4 * K * N;  
+    const int output_elements = M * N;
 
     // mem for split buffers
-    uint8_t src1_hi[MAX]; // A
-    uint8_t src1_lo[MAX]; // B
-    uint8_t src2_hi[MAX]; // C
-    uint8_t src2_lo[MAX]; // D
+    uint8_t src1_hi[src1_elements]; // A
+    uint8_t src1_lo[src1_elements]; // B
+    uint8_t src2_hi[src2_elements]; // C
+    uint8_t src2_lo[src2_elements]; // D
 
     // Split into low and high bits
-    bit_split(src1, src1_lo, src1_hi, MAX);
-    bit_split(src2, src2_lo, src2_hi, MAX);
+    bit_split(src1, src1_lo, src1_hi, src1_elements);
+    bit_split(src2, src2_lo, src2_hi, src2_elements);
 
     // init mem for products
     uint32_t AC[MAX/4]  __attribute__((aligned(64)));
@@ -208,18 +218,18 @@ inline void bit_split_amx_matmul(const uint16_t* src1, const uint16_t* src2, uin
     memset(BD, 0, sizeof(BD));
 
     // compute AC, AD, BC, BD
-    amx_matmul(16, 16, 16, src1_hi, src2_hi, AC); // A * C
-    amx_matmul(16, 16, 16, src1_hi, src2_lo, AD); // A * D
-    amx_matmul(16, 16, 16, src1_lo, src2_hi, BC); // B * C
-    amx_matmul(16, 16, 16, src1_lo, src2_lo, BD); // B * D
+    amx_matmul(M, K, N, src1_hi, src2_hi, AC); // A * C
+    amx_matmul(M, K, N, src1_hi, src2_lo, AD); // A * D
+    amx_matmul(M, K, N, src1_lo, src2_hi, BC); // B * C
+    amx_matmul(M, K, N, src1_lo, src2_lo, BD); // B * D
 
     // left shift w/ AVX-512  (picked up from FOIL-ing)
-    left_shift_buffer32_avx512(AC, MAX/4, 16); // AC * 256 * 256
-    left_shift_buffer32_avx512(BC, MAX/4, 8); // BD * 256
-    left_shift_buffer32_avx512(AD, MAX/4, 8); // AD * 256
+    left_shift_buffer32_avx512(AC, output_elements, 16); // AC * 256 * 256
+    left_shift_buffer32_avx512(BC, output_elements, 8); // BD * 256
+    left_shift_buffer32_avx512(AD, output_elements, 8); // AD * 256
     
     // recombine w/ AVX-512
-    add_buffer32_avx512(AC, BD, res, MAX/4);
-    add_buffer32_avx512(res, BC, res, MAX/4);
-    add_buffer32_avx512(res, AD, res, MAX/4);
+    add_buffer32_avx512(AC, BD, res, output_elements);
+    add_buffer32_avx512(res, BC, res, output_elements);
+    add_buffer32_avx512(res, AD, res, output_elements);
 }
