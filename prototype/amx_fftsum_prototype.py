@@ -3,7 +3,7 @@ import re # regular expression
 
 """
 This file contains a protype of a proposed algorithm for using AMX tiles to speed up the fftsum
-component of the SWIFFT algorithm. The fftsum component (from a perspective slightly abstracted 
+component of the LibSWIFFT library. The fftsum component (from a perspective slightly abstracted 
 from the order it performs this) computes the hadamard product of two 32x64 matrices (PI_key and 
 fftout in the context of LibSWIFFT) followed by a sum along the column dimmensions, resulting in 
 a 1x64 vector output.
