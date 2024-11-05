@@ -130,7 +130,6 @@ inline void amx_matmul(int M, int K, int N, uint8_t *A, uint8_t *B, uint32_t *C)
   amx_dpbuud(M, K, N, A, new_B, C);
 }
 
-
 /**
  * For the purposes of accelerating LibSWIFFT, we are working under Z_257. This means that to 
  * represent the full range of values 0-256 (inclusive), we need at least 9 bits of precision.
@@ -279,125 +278,85 @@ inline void init_random_buffer16(uint16_t *buf, uint32_t size) {
   }
 }
 
-/* matrix w/ sequentially increasing values within Z_257 */
-const uint16_t A[1024] = {
-  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 
-  64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 
-  128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 
-  192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255, 
-  256, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 
-  63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 
-  127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 
-  191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 
-  255, 256, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 
-  62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 
-  126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 
-  190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 
-  254, 255, 256, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 
-  61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 
-  125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 
-  189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 
-};
 
-void test_const_input(bool verbose) {
-    
-    // ensure input values are within Z_257
-    if (ensure_correct_range(A, MAX)) {
-        if (verbose) printf("\nAll input values are within the range of Z_257...\n");
-    } else {
-        if (verbose) printf("\nSome values are out of range!\n");
-    }
-
-    // niave result array
-    uint32_t naive_res[256];
-    memset(naive_res, 0, sizeof(naive_res));
-
-    // naive matmul
-    naive_matmul_uint16_t(A, A, naive_res, 16, 64, 16);
-    
-    // bit split matmul result array
-    uint32_t bit_split_result[256];
-    memset(bit_split_result, 0, sizeof(bit_split_result));
-
-    // bit split naive matmul
-    bit_split_amx_matmul(A, A, bit_split_result);
-
-
-    // print result 
-    if (verbose) {
-        printf("\nNaive Result:\n");
-        print_buffer32(naive_res, 16, 16);   
-    
-        printf("\nBit Split Result:\n");
-        print_buffer32(bit_split_result, 16, 16);
-    }
-    // ensure naive and naive w/ bit split are equal
-    for (size_t i = 0; i < 256; ++i) {
-        assert(naive_res[i] == bit_split_result[i]);
-    }
-
-    printf("\nResults match for static inputs!\n");
-}
-
-/* Test on fuzz input */
-void test_fuzz_input (int rounds, bool verbose) {
-
+/* Test amx accuracy on fuzz input */
+void test_amx_accuracy_fuzz (int rounds, bool verbose) {
     for (int i=0; i<rounds; i++){
 
-        // initialize random input
-        uint16_t fuzz_lhs[MAX];
-        uint16_t fuzz_rhs[MAX];
+        // init random input
+        uint16_t fuzz_lhs[MAX], fuzz_rhs[MAX];
         init_random_buffer16(fuzz_lhs, MAX);
         init_random_buffer16(fuzz_rhs, MAX);
 
-        // ensure input values are within Z_257
-        if (ensure_correct_range(A, MAX)) {
-            if (verbose) printf("\nAll input values are within the range of Z_257...\n");
-        } else {
-            if (verbose) printf("\nSome values are out of range!\n");
-        }
-
-        // naive result array
-        uint32_t naive_res[256];
+        // result buffers
+        uint32_t naive_res[256], bit_split_result[256];
         memset(naive_res, 0, sizeof(naive_res));
-
-        // naive matmul
-        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
-        
-        // bit split matmul result array
-        uint32_t bit_split_result[256];
         memset(bit_split_result, 0, sizeof(bit_split_result));
 
-        // bit split naive matmul
-        // bit_split_naive_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
+        // perform both matmuls
+        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
         bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
 
         // print result 
         if (verbose) {
             printf("\nNaive Result:\n");
             print_buffer32(naive_res, 16, 16);   
-        
             printf("\nBit Split Result:\n");
             print_buffer32(bit_split_result, 16, 16);
         }
         // ensure naive and naive w/ bit split are equal
-        for (size_t i = 0; i < 256; ++i) {
-            if (naive_res[i] != bit_split_result[i]) {
-                printf("Mismatch at index %zu: naive_res[%zu] = %u, bit_split_result[%zu] = %u\n", i, i, naive_res[i], i, bit_split_result[i]);
-            }
+        for (size_t i = 0; i < 256; ++i)
             assert(naive_res[i] == bit_split_result[i]);
-        }
+    
     }
-    printf("\nResults match for fuzz inputs!\n\n\n");
+    puts("\test_amx_accuracy_fuzz... PASS!!\n");
 }
+
+/* time trial for AMX mamtul against naive */
+void test_amx_time_fuzz(int rounds) {
+    clock_t start, end;
+    double amx_cpu_time, naive_cpu_time;
+
+    // init random input
+    uint16_t fuzz_lhs[MAX], fuzz_rhs[MAX];
+    init_random_buffer16(fuzz_lhs, MAX);
+    init_random_buffer16(fuzz_rhs, MAX);
+
+    // result buffers
+    uint32_t naive_res[256], bit_split_result[256];
+    memset(naive_res, 0, sizeof(naive_res));
+    memset(bit_split_result, 0, sizeof(bit_split_result));
+
+    // perform rounds number of matmuls and time them
+    start = clock();
+    for (int i = 0; i < rounds; i++) {
+        naive_matmul_uint16_t(fuzz_lhs, fuzz_rhs, naive_res, 16, 64, 16);
+    }
+    end = clock();
+    naive_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    // perform rounds number of matmuls and time them
+    start = clock();
+    for (int i = 0; i < rounds; i++) {
+        bit_split_amx_matmul(fuzz_lhs, fuzz_rhs, bit_split_result);
+    }
+    end = clock();
+    amx_cpu_time = ((double) (end - start)) / CLOCKS_PER_SEC;
+
+    // print results
+    printf("\nNaive CPU Time: %f\n", naive_cpu_time);
+    printf("AMX CPU Time: %f\n", amx_cpu_time);
+    printf("AMX is %f times faster than naive\n", naive_cpu_time / amx_cpu_time);
+}   
 
 int main(void){
 
     // ask permission to use tile data
     set_tiledata_use();
 
-    test_const_input(false);
-    test_fuzz_input(100, false);
+    test_amx_accuracy_fuzz(10000, false);
+    test_amx_time_fuzz(10000);
 
-    return 0;
+    puts("");
+    return 0;   
 }
