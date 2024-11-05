@@ -1,4 +1,4 @@
-CFLAG = -O3 -march=native -fno-strict-aliasing -mamx-tile -mamx-int8 -mavx512f -mavx512dq # -O2 default for amx
+CFLAG = -O3 -march=native -fno-strict-aliasing -mamx-tile -mamx-int8 -mavx512f -mavx512dq -msse2 # -O2 default for amx
 CC = gcc
 BIN1 = test-amx-matmul 
 BIN2 = test-amx-fftsum
