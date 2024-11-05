@@ -65,7 +65,8 @@ inline void transpose_8x8_16_sse2(__m128i * array)
 
 
 /* Transposes a 32x64 matrix using sse2 intrinsics */
-inline void transpose_32x64_sse2(const int16_t *input, int16_t *output, int rows, int cols) {
+inline void transpose_32x64_sse2(const int16_t *input, int16_t *output) {
+	const int rows = 32, cols = 64;
     for (int i = 0; i < rows; i += 8) {
         for (int j = 0; j < cols; j += 8) {
             __m128i block[8];

@@ -33,7 +33,7 @@ void test_transpose_32x64_sse2() {
     naive_transpose_matrix_int16_t(naive_input, output_naive, 32, 64);
 
     // transpose using sse2
-    transpose_32x64_sse2(vectorized_input, output_vectorized, 32, 64);
+    transpose_32x64_sse2(vectorized_input, output_vectorized);
 
     // compare results
     for (int i = 0; i < 32 * 64; i++) {
